@@ -1,16 +1,15 @@
 module Main where
 
-import SSTG.GHC.CompileToSTG
-import SSTG.SimpleSTG
--- import IOUtils
-import SSTG.Serialization
+import Language.SSTG.GHC.CompileToSTG
+import Language.SSTG.Syntax
+import Language.SSTG.Serialization
 
 import Outputable
 import StgSyn (pprStgBindings)
 import HscTypes
 import Module
 
-import IO
+import System.IO
 import System.Environment (getArgs)
 import Control.Monad
 import System.FilePath

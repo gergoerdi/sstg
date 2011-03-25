@@ -1,6 +1,6 @@
-module SSTG.Serialization (writeStgb, readStgb) where
+module Language.SSTG.Serialization (writeStgb, readStgb) where
 
-import SSTG.SimpleSTG
+import Language.SSTG.Syntax
 
 import HscTypes
 import Module
@@ -28,7 +28,7 @@ writeStgb fn sstgs = do
        
   -- Remember where the dictionary pointer will go
   fsDict_p_p <- tellBin bh
-  put_ bh fsDict_p_p	-- Placeholder for ptr to dictionary
+  put_ bh fsDict_p_p -- Placeholder for ptr to dictionary
       
   -- Remember where the symbol table pointer will go
   nameDict_p_p <- tellBin bh
@@ -42,9 +42,9 @@ writeStgb fn sstgs = do
   put_ bh sstgs
       
   -- Write the symtab pointer at the front of the file
-  nameDict_p <- tellBin bh	        -- This is where the symtab will start
-  putAt bh nameDict_p_p nameDict_p	-- Fill in the placeholder
-  seekBin bh nameDict_p		-- Seek back to the end of the file      
+  nameDict_p <- tellBin bh          -- This is where the symtab will start
+  putAt bh nameDict_p_p nameDict_p -- Fill in the placeholder
+  seekBin bh nameDict_p            -- Seek back to the end of the file      
       
   -- Write the symbol table itself
   putSymbolTable bh nameDict
@@ -53,9 +53,9 @@ writeStgb fn sstgs = do
   -- writing the symbol table may create more dictionary entries.
 
   -- Write the dictionary pointer at the fornt of the file
-  fsDict_p <- tellBin bh	        -- This is where the dictionary will start
-  putAt bh fsDict_p_p fsDict_p	-- Fill in the placeholder
-  seekBin bh fsDict_p		-- Seek back to the end of the file
+  fsDict_p <- tellBin bh         -- This is where the dictionary will start
+  putAt bh fsDict_p_p fsDict_p  -- Fill in the placeholder
+  seekBin bh fsDict_p           -- Seek back to the end of the file
 
   -- Write the dictionary itself
   fsDict_next <- readFastMutInt $ fsd_next fsDict

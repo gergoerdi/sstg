@@ -1,4 +1,4 @@
-module SSTG.GHC.CompileToSTG (compileToStg, Stg, CompileFlags(..), CompileRes(..)) where
+module Language.SSTG.GHC.CompileToSTG (compileToStg, Stg, CompileFlags(..), CompileRes(..)) where
 
 import GHC
 import HscTypes

@@ -1,4 +1,4 @@
-module SSTG.SimpleSTG where
+module Language.SSTG.Syntax where
 
 import StgSyn
 import CoreSyn (AltCon(..))
