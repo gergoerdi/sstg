@@ -76,7 +76,7 @@ instance (Binary id) => Binary (SStgExpr id) where
     
 data SStgArg id = SStgArgVar id
                 | SStgArgLit Literal
-                -- | SStgArgType Type -- TODO: Type?
+                --  | SStgArgType Type -- TODO: What the hell is a Type argument?
 
 sStgArgVar_tag = 'v'
 sStgArgLit_tag = 'l'
@@ -123,9 +123,6 @@ instance (Binary id) => Binary (SStgBinding id) where
   put_ bh (SStgBinding name rhs) = put_ bh name >> put_ bh rhs
   get bh = SStgBinding <$> get bh <*> get bh
                               
--- instance (Binary id) => Binary (SStgBinding id) where
---   put_ bh (SStgBinding name rhs) = put_ bh name
-
 data SStgRhs id = SStgRhsCon id [SStgArg id]
                 | SStgRhsClosure SUpdateFlag [id] (SStgExpr id)
                   
