@@ -1,6 +1,6 @@
 module Language.SSTG.Syntax (
   -- * Simplified STG
-  SStgBinding(..), SStgRhs(..), SUpdateFlag(..),
+  SStgBinding(..), SStgRhs(..), 
   SStgExpr(..), SStgArg(..), SStgAlt(..), SStgPat(..),
   -- * Conversion from GHC's representation
   simplifyBinding
@@ -22,7 +22,7 @@ import qualified Data.IntMap as IntMap
 getTag :: BinHandle -> IO Char
 getTag = get
 
-newtype BinStgOp = BinStgOp { getStgOp :: StgOp }
+newtype StgOp_Binary = StgOp_Binary { getStgOp :: StgOp }
 
 stgPrimOp_tag = 'o'
 stgPrimCallOp_tag = 'c'
@@ -31,13 +31,13 @@ stgFCallOp_tag = 'f'
 stgPrimOp_map :: IntMap PrimOp
 stgPrimOp_map = IntMap.fromList $ map (\ op -> (primOpTag op, op)) allThePrimOps
 
-instance Binary BinStgOp where
+instance Binary StgOp_Binary where
   put_ bh op = case getStgOp op of
     (StgPrimOp op) -> put_ bh stgPrimOp_tag >> put_ bh (primOpTag op)
     (StgPrimCallOp (PrimCall clabel)) -> put_ bh stgPrimCallOp_tag >> put_ bh clabel
     (StgFCallOp fcall u) -> put_ bh stgFCallOp_tag >> put_ bh fcall >> put_ bh (getKey u)
     
-  get bh = BinStgOp <$> do
+  get bh = StgOp_Binary <$> do
     tag <- getTag bh
     case () of
       _ | tag == stgPrimOp_tag -> StgPrimOp <$> (stgPrimOp_map!) <$> get bh
@@ -65,7 +65,7 @@ instance (Binary id) => Binary (SStgExpr id) where
   put_ bh (SStgApp f args) = put_ bh sStgApp_tag >> put_ bh f >> put_ bh args
   put_ bh (SStgLit lit) = put_ bh sStgLit_tag >> put_ bh lit
   put_ bh (SStgConApp c args) = put_ bh sStgConApp_tag >> put_ bh c >> put_ bh args
-  put_ bh (SStgOpApp op args) = put_ bh sStgOpApp_tag >> put_ bh (BinStgOp op) >> put_ bh args
+  put_ bh (SStgOpApp op args) = put_ bh sStgOpApp_tag >> put_ bh (StgOp_Binary op) >> put_ bh args
   put_ bh (SStgLam vars body) = put_ bh sStgLam_tag >> put_ bh vars >> put_ bh body                                
   put_ bh (SStgCase expr alts) = put_ bh sStgCase_tag >> put_ bh expr >> put_ bh alts
   put_ bh (SStgLet binds body) = put_ bh sStgLet_tag >> put_ bh binds >> put_ bh body                                
@@ -136,36 +136,39 @@ instance (Binary id) => Binary (SStgBinding id) where
                               
 -- |Simplified version of 'GenStgRhs'.
 data SStgRhs id = SStgRhsCon id [SStgArg id]
-                | SStgRhsClosure SUpdateFlag [id] (SStgExpr id)
+                | SStgRhsClosure UpdateFlag [id] (SStgExpr id)
                   
 sStgRhsCon_tag = 'c'
 sStgRhsClosure_tag = '\\'
 
 instance (Binary id) => Binary (SStgRhs id) where
   put_ bh (SStgRhsCon con args) = put_ bh sStgRhsCon_tag >> put_ bh con >> put_ bh args
-  put_ bh (SStgRhsClosure update args body) = put_ bh sStgRhsClosure_tag >> put_ bh update >> put_ bh args >> put_ bh body
+  put_ bh (SStgRhsClosure update args body) = put_ bh sStgRhsClosure_tag >> put_ bh (UpdateFlag_Binary update) >> put_ bh args >> put_ bh body
   
   get bh = do
     tag <- getTag bh
     case () of
       _ | tag == sStgRhsCon_tag -> SStgRhsCon <$> get bh <*> get bh
-        | tag == sStgRhsClosure_tag -> SStgRhsClosure <$> get bh <*> get bh <*> get bh
+        | tag == sStgRhsClosure_tag -> SStgRhsClosure <$> (getUpdateFlag <$> get bh) <*> get bh <*> get bh
                           
--- |Simplified version of 'UpdateFlag'.
-data SUpdateFlag = SUpdatable | SReEntrant                          
+newtype UpdateFlag_Binary = UpdateFlag_Binary { getUpdateFlag :: UpdateFlag }                         
 
-sUpdatable_tag = 'u'
-sReEntrant_tag = 'r'
+updatable_tag = 'u'
+reEntrant_tag = 'r'
+singleEntry_tag = 's'
 
-instance Binary SUpdateFlag where
-  put_ bh SUpdatable = put_ bh sUpdatable_tag
-  put_ bh SReEntrant = put_ bh sReEntrant_tag
+instance Binary UpdateFlag_Binary where
+  put_ bh ufb = put_ bh $ case getUpdateFlag ufb of
+    Updatable -> updatable_tag
+    ReEntrant -> reEntrant_tag
+    SingleEntry -> singleEntry_tag
   
-  get bh = do
+  get bh = UpdateFlag_Binary <$> do
     tag <- getTag bh
     case () of
-      _ | tag == sUpdatable_tag -> return SUpdatable
-        | tag == sReEntrant_tag -> return SReEntrant
+      _ | tag == updatable_tag -> return Updatable
+        | tag == reEntrant_tag -> return ReEntrant
+        | tag == singleEntry_tag -> return SingleEntry
 
 simplifyBinding :: StgBinding  -> [SStgBinding Name]
 simplifyBinding (StgNonRec x body) = [SStgBinding (getName x) (simplifyRhs body)]
@@ -173,10 +176,7 @@ simplifyBinding (StgRec binds) = map (uncurry SStgBinding . (getName *** simplif
 
 simplifyRhs :: StgRhs -> SStgRhs Name
 simplifyRhs (StgRhsCon _ con args) = SStgRhsCon (getName con) $ map simplifyArg args
-simplifyRhs (StgRhsClosure _ _ _ update _ args expr) = SStgRhsClosure update' (map getName args) (simplifyExpr expr)
-  where update' = case update of          
-          ReEntrant -> SReEntrant
-          _ -> SUpdatable
+simplifyRhs (StgRhsClosure _ _ _ update _ args expr) = SStgRhsClosure update (map getName args) (simplifyExpr expr)
 
 simplifyArg :: StgArg -> SStgArg Name
 simplifyArg (StgVarArg x) = SStgArgVar (getName x)
