@@ -1,4 +1,10 @@
-module Language.SSTG.Syntax where
+module Language.SSTG.Syntax (
+  -- * Simplified STG
+  SStgBinding(..), SStgRhs(..), SUpdateFlag(..),
+  SStgExpr(..), SStgArg(..), SStgAlt(..), SStgPat(..),
+  -- * Conversion from GHC's representation
+  simplifyBinding
+  ) where
 
 import StgSyn
 import CoreSyn (AltCon(..))
@@ -38,6 +44,7 @@ instance Binary BinStgOp where
         | tag == stgPrimCallOp_tag -> StgPrimCallOp <$> PrimCall <$> get bh
         | tag == stgFCallOp_tag -> StgFCallOp <$> get bh <*> (mkUniqueGrimily <$> get bh)
                    
+-- |Simplified version of 'GenStgExpr'.
 data SStgExpr id = SStgApp id [SStgArg id]
                  | SStgLit Literal
                  | SStgConApp id [SStgArg id]
@@ -74,6 +81,7 @@ instance (Binary id) => Binary (SStgExpr id) where
         | tag == sStgCase_tag -> SStgCase <$> get bh <*> get bh
         | tag == sStgLet_tag -> SStgLet <$> get bh <*> get bh
     
+-- |Simplified version of 'GenStgArg'.
 data SStgArg id = SStgArgVar id
                 | SStgArgLit Literal
                 --  | SStgArgType Type -- TODO: What the hell is a Type argument?
@@ -91,13 +99,15 @@ instance (Binary id) => Binary (SStgArg id) where
       _ | tag == sStgArgVar_tag -> SStgArgVar <$> get bh
         | tag == sStgArgLit_tag -> SStgArgLit <$> get bh
 
+-- |Simplified version of 'GenStgAlt'
 data SStgAlt id = SStgAlt (SStgPat id) (SStgExpr id)
 
 instance (Binary id) => Binary (SStgAlt id) where
   put_ bh (SStgAlt pat expr) = put_ bh pat >> put_ bh expr 
   get bh = SStgAlt <$> get bh <*> get bh
                           
-data SStgPat id = SStgPatData id [id]
+-- |Simplified version of `AltCon`. 
+data SStgPat id = SStgPatData id [id] -- ^ The list of variables bound by the constructor is merged from `GenStgAlt`.
                 | SStgPatLit Literal
                 | SStgPatWildcard
                      
@@ -117,12 +127,14 @@ instance (Binary id) => Binary (SStgPat id) where
         | tag == sStgAltLit_tag -> SStgPatLit <$> get bh
         | tag == sStgAltWildcard_tag -> return SStgPatWildcard    
   
+-- |Simplified version of 'GenStgBinding'.
 data SStgBinding id = SStgBinding id (SStgRhs id)
 
 instance (Binary id) => Binary (SStgBinding id) where
   put_ bh (SStgBinding name rhs) = put_ bh name >> put_ bh rhs
   get bh = SStgBinding <$> get bh <*> get bh
                               
+-- |Simplified version of 'GenStgRhs'.
 data SStgRhs id = SStgRhsCon id [SStgArg id]
                 | SStgRhsClosure SUpdateFlag [id] (SStgExpr id)
                   
@@ -139,6 +151,7 @@ instance (Binary id) => Binary (SStgRhs id) where
       _ | tag == sStgRhsCon_tag -> SStgRhsCon <$> get bh <*> get bh
         | tag == sStgRhsClosure_tag -> SStgRhsClosure <$> get bh <*> get bh <*> get bh
                           
+-- |Simplified version of 'UpdateFlag'.
 data SUpdateFlag = SUpdatable | SReEntrant                          
 
 sUpdatable_tag = 'u'
