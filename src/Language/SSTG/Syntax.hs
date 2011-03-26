@@ -1,5 +1,6 @@
 module Language.SSTG.Syntax (
   -- * Simplified STG
+  SStgBindingGroup,
   SStgBinding(..), SStgRhs(..), 
   SStgExpr(..), SStgArg(..), SStgAlt(..), SStgPat(..),
   -- * Conversion from GHC's representation
@@ -51,7 +52,7 @@ data SStgExpr id = SStgApp id [SStgArg id]
                  | SStgOpApp StgOp [SStgArg id]
                  | SStgLam [id] (SStgExpr id)
                  | SStgCase (SStgExpr id) [SStgAlt id]
-                 | SStgLet [SStgBinding id] (SStgExpr id)
+                 | SStgLet (SStgBindingGroup id) (SStgExpr id)
                    
 sStgApp_tag = 'a'                   
 sStgLit_tag = 'l'
@@ -130,6 +131,8 @@ instance (Binary id) => Binary (SStgPat id) where
 -- |Simplified version of 'GenStgBinding'.
 data SStgBinding id = SStgBinding id (SStgRhs id)
 
+type SStgBindingGroup id = [SStgBinding id]
+
 instance (Binary id) => Binary (SStgBinding id) where
   put_ bh (SStgBinding name rhs) = put_ bh name >> put_ bh rhs
   get bh = SStgBinding <$> get bh <*> get bh
@@ -170,7 +173,7 @@ instance Binary UpdateFlag_Binary where
         | tag == reEntrant_tag -> return ReEntrant
         | tag == singleEntry_tag -> return SingleEntry
 
-simplifyBinding :: StgBinding  -> [SStgBinding Name]
+simplifyBinding :: StgBinding  -> SStgBindingGroup Name
 simplifyBinding (StgNonRec x body) = [SStgBinding (getName x) (simplifyRhs body)]
 simplifyBinding (StgRec binds) = map (uncurry SStgBinding . (getName *** simplifyRhs)) binds
 

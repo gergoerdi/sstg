@@ -11,7 +11,6 @@ import FastMutInt
 import Unique
 import UniqSupply
 import IfaceEnv
-import SrcLoc (noSrcSpan)
 import TcRnMonad
 
 import Data.Array
@@ -21,9 +20,12 @@ import Control.Monad
 import Data.Word
 import Control.Arrow
 
+import GHC.Paths (libdir)
+import GHC
+
 -- Based on GHC's BinIface
-writeStgb :: FilePath -> [SStgBinding Name] -> IO ()
-writeStgb fn sstgs = do
+writeStgb :: FilePath -> [SStgBindingGroup Name] -> IO ()
+writeStgb fn groups = do
   bh <- openBinMem initBinMemSize       
        
   -- Remember where the dictionary pointer will go
@@ -39,7 +41,7 @@ writeStgb fn sstgs = do
   ud <- newWriteState (putSymbol nameDict) (putSymbol fsDict)
   bh <- return $ setUserData bh ud
             
-  put_ bh sstgs
+  put_ bh groups
       
   -- Write the symtab pointer at the front of the file
   nameDict_p <- tellBin bh          -- This is where the symtab will start
@@ -64,8 +66,8 @@ writeStgb fn sstgs = do
   
   writeBinMem bh fn
   
-readStgb :: GhcMonad m => FilePath -> m [SStgBinding Name]
-readStgb fn = do
+readStgb :: FilePath -> IO [SStgBindingGroup Name]
+readStgb fn = runGhc (Just libdir) $ do
   env <- mkEnv
   liftIO . runIOEnv env $ do
     update_nc <- mkNameCacheUpdater

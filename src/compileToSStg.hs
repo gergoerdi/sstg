@@ -52,4 +52,4 @@ main = do
   let stgbName = outDir </> packageIdString (cr_packageId cr) `addExtension` ".stgb"
   putStrLn . unwords $ ["Creating", stgbName]
   let bindings = map fst $ concatMap snd stgs
-  writeStgb stgbName $ concatMap simplifyBinding bindings
+  writeStgb stgbName $ map simplifyBinding bindings
