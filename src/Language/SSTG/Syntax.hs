@@ -51,7 +51,7 @@ data SStgExpr id = SStgApp id [SStgArg id]
                  | SStgConApp id [SStgArg id]
                  | SStgOpApp StgOp [SStgArg id]
                  | SStgLam [id] (SStgExpr id)
-                 | SStgCase (SStgExpr id) [SStgAlt id]
+                 | SStgCase id (SStgExpr id) [SStgAlt id]
                  | SStgLet (SStgBindingGroup id) (SStgExpr id)
                    
 sStgApp_tag = 'a'                   
@@ -67,9 +67,9 @@ instance (Binary id) => Binary (SStgExpr id) where
   put_ bh (SStgLit lit) = put_ bh sStgLit_tag >> put_ bh lit
   put_ bh (SStgConApp c args) = put_ bh sStgConApp_tag >> put_ bh c >> put_ bh args
   put_ bh (SStgOpApp op args) = put_ bh sStgOpApp_tag >> put_ bh (StgOp_Binary op) >> put_ bh args
-  put_ bh (SStgLam vars body) = put_ bh sStgLam_tag >> put_ bh vars >> put_ bh body                                
-  put_ bh (SStgCase expr alts) = put_ bh sStgCase_tag >> put_ bh expr >> put_ bh alts
-  put_ bh (SStgLet binds body) = put_ bh sStgLet_tag >> put_ bh binds >> put_ bh body                                
+  put_ bh (SStgLam vars body) = put_ bh sStgLam_tag >> put_ bh vars >> put_ bh body
+  put_ bh (SStgCase var expr alts) = put_ bh sStgCase_tag >> put_ bh var >> put_ bh expr >> put_ bh alts
+  put_ bh (SStgLet binds body) = put_ bh sStgLet_tag >> put_ bh binds >> put_ bh body
 
   get bh = do
     tag <- getTag bh
@@ -79,7 +79,7 @@ instance (Binary id) => Binary (SStgExpr id) where
         | tag == sStgConApp_tag -> SStgConApp <$> get bh <*> get bh
         | tag == sStgOpApp_tag -> SStgOpApp <$> (getStgOp <$> get bh) <*> get bh
         | tag == sStgLam_tag -> SStgLam <$> get bh <*> get bh
-        | tag == sStgCase_tag -> SStgCase <$> get bh <*> get bh
+        | tag == sStgCase_tag -> SStgCase <$> get bh <*> get bh <*> get bh
         | tag == sStgLet_tag -> SStgLet <$> get bh <*> get bh
     
 -- |Simplified version of 'GenStgArg'.
@@ -192,7 +192,7 @@ simplifyExpr (StgLit lit) = SStgLit lit
 simplifyExpr (StgConApp con args) = SStgConApp (getName con) $ map simplifyArg args
 simplifyExpr (StgOpApp op args _) = SStgOpApp op $ map simplifyArg args
 simplifyExpr (StgLam _ xs body) = SStgLam (map getName xs) $ simplifyExpr body
-simplifyExpr (StgCase e _ _ _ _ _ alts) = SStgCase (simplifyExpr e) $ map simplifyAlt alts
+simplifyExpr (StgCase e _ _ var _ _ alts) = SStgCase (getName var) (simplifyExpr e) (map simplifyAlt alts)
 simplifyExpr (StgLet binding body) = SStgLet (simplifyBinding binding) $ simplifyExpr body
 simplifyExpr (StgLetNoEscape _ _ binding body) = simplifyExpr (StgLet binding body)
 simplifyExpr (StgSCC _ e) = simplifyExpr e
