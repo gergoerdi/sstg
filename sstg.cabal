@@ -46,19 +46,27 @@ source-repository head
   Type:     git
   Location: git://github.com/gergoerdi/sstg.git
 
-Executable compileToSStg
+Executable sstg-compile
   hs-source-dirs:    src
-  Main-is:             compileToSStg.hs
+  Main-is:             sstg-compile.hs
+  Other-modules:     Language.SSTG.Syntax Language.SSTG.Serialization Language.SSTG.GHC.CompileToSTG  
 
   ghc-options:       -Wall -fwarn-tabs
                      -fno-warn-incomplete-patterns -fno-warn-unused-binds -fno-warn-unused-matches
                      -fno-warn-missing-signatures -fno-warn-name-shadowing -fno-warn-orphans
 
-  Build-depends:     base >= 4.0, ghc == 6.12.*, containers, array, mtl, ghc-paths, directory, filepath
+  Build-depends:     base >= 4.0, ghc == 6.12.*, containers, array, mtl, ghc-paths, directory, filepath  
   
-  -- -- Modules not exported by this package.
-  -- Other-modules:       Language.IA32.Syntax Language.IA32.Pretty
-  --                      Language.Brainfuck.Syntax Language.Brainfuck.Parser Language.Brainfuck.CompileToIA32
+Executable sstg-dump
+  hs-source-dirs:    src
+  Main-is:           sstg-dump.hs
+  Other-modules:     Language.SSTG.Syntax Language.SSTG.Serialization
+
+  ghc-options:       -Wall -fwarn-tabs
+                     -fno-warn-incomplete-patterns -fno-warn-unused-binds -fno-warn-unused-matches
+                     -fno-warn-missing-signatures -fno-warn-name-shadowing -fno-warn-orphans
+
+  Build-depends:     base >= 4.0, ghc == 6.12.*, containers, array, mtl, ghc-paths
   
 Library
   hs-source-dirs:    src
