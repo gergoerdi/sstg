@@ -4,7 +4,9 @@ module Language.SSTG.Syntax (
   SStgBinding(..), SStgRhs(..), 
   SStgExpr(..), SStgArg(..), SStgAlt(..), SStgPat(..),
   -- * Conversion from GHC's representation
-  simplifyBinding
+  simplifyBinding,
+  module Literal,
+  UpdateFlag(..)
   ) where
 
 import StgSyn
