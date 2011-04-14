@@ -37,14 +37,14 @@ stgPrimOp_map = IntMap.fromList $ map (\ op -> (primOpTag op, op)) allThePrimOps
 instance Binary StgOp_Binary where
   put_ bh op = case getStgOp op of
     (StgPrimOp op) -> put_ bh stgPrimOp_tag >> put_ bh (primOpTag op)
-    (StgPrimCallOp (PrimCall clabel)) -> put_ bh stgPrimCallOp_tag >> put_ bh clabel
+    (StgPrimCallOp (PrimCall clabel pkgId)) -> put_ bh stgPrimCallOp_tag >> put_ bh clabel >> put_ bh pkgId
     (StgFCallOp fcall u) -> put_ bh stgFCallOp_tag >> put_ bh fcall >> put_ bh (getKey u)
     
   get bh = StgOp_Binary <$> do
     tag <- getTag bh
     case () of
       _ | tag == stgPrimOp_tag -> StgPrimOp <$> (stgPrimOp_map!) <$> get bh
-        | tag == stgPrimCallOp_tag -> StgPrimCallOp <$> PrimCall <$> get bh
+        | tag == stgPrimCallOp_tag -> StgPrimCallOp <$> (PrimCall <$> get bh <*> get bh)
         | tag == stgFCallOp_tag -> StgFCallOp <$> get bh <*> (mkUniqueGrimily <$> get bh)
                    
 -- |Simplified version of 'GenStgExpr'.

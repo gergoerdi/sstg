@@ -52,7 +52,7 @@ compileToStg args = runGhc (Just libdir) $ do
   (dflags, largs, _) <- parseDynamicFlags dflags (map noLoc args)
   _ <- setSessionDynFlags dflags
   
-  let flags = [Flag "dump-stg" (NoArg (tell [DumpStg])) Supported]
+  let flags = [Flag "dump-stg" (NoArg (liftEwM $ tell [DumpStg]))]
   let ((lfilenames, _, _), opts) = runWriter $ processArgs flags largs
       filenames = map unLoc lfilenames
 
